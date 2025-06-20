@@ -1,0 +1,30 @@
+//@version=6
+indicator("Supertrend with Clear Buy/Sell Signals", overlay = true)
+
+atrPeriod = input.int(10, "ATR Period")
+factor = input.float(3.0, "Multiplier", step=0.1)
+
+[supertrend, direction] = ta.supertrend(factor, atrPeriod)
+
+// Plot Supertrend lines
+upTrend = plot(direction > 0 ? supertrend : na, title="Up Trend", color=color.green, style=plot.style_line)
+downTrend = plot(direction < 0 ? supertrend : na, title="Down Trend", color=color.red, style=plot.style_line)
+
+// ==== Signal Logic ====
+buySignal = direction[1] < 0 and direction > 0   // Bear to Bull
+sellSignal = direction[1] > 0 and direction < 0  // Bull to Bear
+
+// === Plot Buy/Sell arrows ===
+plotshape(buySignal, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.arrowup, size=size.large, text="Buy")
+plotshape(sellSignal, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.arrowdown, size=size.large, text="Sell")
+
+// === Optional Exit Logic ===
+buyExit = sellSignal
+sellExit = buySignal
+
+plotshape(buyExit, title="Buy Exit", location=location.abovebar, color=color.orange, style=shape.xcross, text="Exit Buy")
+plotshape(sellExit, title="Sell Exit", location=location.belowbar, color=color.orange, style=shape.xcross, text="Exit Sell")
+
+// === Alerts ===
+alertcondition(buySignal, title="Buy Signal", message="Supertrend: Buy Signal Triggered")
+alertcondition(sellSignal, title="Sell Signal", message="Supertrend: Sell Signal Triggered")
