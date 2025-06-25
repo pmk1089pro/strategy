@@ -1,0 +1,54 @@
+//@version=6
+strategy("📈 Supertrend PRO (Signal-Based Only)", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+// === INPUTS ===
+atrPeriod     = input.int(10, "ATR Period")
+factor        = input.float(3.5, "Supertrend Factor", step=0.1)
+emaFastLen    = input.int(9, "EMA Fast Length")
+emaSlowLen    = input.int(15, "EMA Slow Length")
+rsiPeriod     = input.int(14, "RSI Period")
+rsiBuyLevel   = input.int(55, "RSI Buy Threshold")
+rsiSellLevel  = input.int(50, "RSI Hold Min Level")
+
+enableShort   = input.bool(true, "Enable Short Trades")
+rsiShortLevel = input.int(40, "RSI Sell Threshold")
+rsiCoverLevel = input.int(45, "RSI Hold Max Level")
+
+// === INDICATORS ===
+[supertrend, direction] = ta.supertrend(factor, atrPeriod)
+emaFast = ta.ema(close, emaFastLen)
+emaSlow = ta.ema(close, emaSlowLen)
+rsi = ta.rsi(close, rsiPeriod)
+
+// === ENTRY CONDITIONS ===
+longSignal = direction[1] == 1 and direction == -1 and emaFast > emaSlow and rsi > rsiBuyLevel
+exitLong   = direction[1] == -1 and direction == 1 or rsi < rsiSellLevel
+
+shortSignal = enableShort and direction[1] == -1 and direction == 1 and emaFast < emaSlow and rsi < rsiShortLevel
+exitShort   = direction[1] == 1 and direction == -1 or rsi > rsiCoverLevel
+
+// === EXECUTION ===
+if (longSignal)
+    strategy.entry("Long", strategy.long)
+
+if (exitLong)
+    strategy.close("Long")
+
+if (shortSignal)
+    strategy.entry("Short", strategy.short)
+
+if (exitShort)
+    strategy.close("Short")
+
+// === VISUALS ===
+plot(emaFast, "EMA Fast", color=color.orange)
+plot(emaSlow, "EMA Slow", color=color.blue)
+
+plotshape(longSignal, title="Buy", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(shortSignal, title="Sell", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)
+
+// === ALERTS ===
+alertcondition(longSignal, title="Buy Signal", message="Buy: Supertrend + EMA + RSI")
+alertcondition(exitLong, title="Exit Long", message="Exit Long: Supertrend flip or RSI weak")
+alertcondition(shortSignal, title="Short Signal", message="Sell: Supertrend + EMA + RSI")
+alertcondition(exitShort, title="Exit Short", message="Exit Short: Supertrend flip or RSI reversal")
