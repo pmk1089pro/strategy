@@ -1,0 +1,48 @@
+//@version=5
+strategy("🔄 Flip Strategy | EMA 11 & 17 + Option Label", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+// === EMAs ===
+ema11 = ta.ema(close, 9)
+ema17 = ta.ema(close, 15)
+
+// === Time Filter (Last 3 Months) ===
+startDate = timestamp("2025-04-03 00:00 +0530")
+inDateRange = time >= startDate
+
+// === Position State Tracker ===
+var int positionState = 0  // 0 = neutral, 1 = long, -1 = short
+
+// === Flip Conditions ===
+flipToLong = inDateRange and close > ema11 and close > ema17 and positionState != 1
+flipToShort = inDateRange and close < ema11 and close < ema17 and positionState != -1
+
+// === Option Strike Calculation ===
+nearest500 = math.round(close / 500) * 500
+putStrike = nearest500 - 1000
+callStrike = nearest500 + 1000
+
+// === Entry Logic ===
+if (flipToLong)
+    strategy.entry("Flip Buy", strategy.long)
+    strategy.close("Flip Sell")
+    positionState := 1
+
+if (flipToShort)
+    strategy.entry("Flip Sell", strategy.short)
+    strategy.close("Flip Buy")
+    positionState := -1
+
+// === Plot EMAs ===
+plot(ema11, title="EMA 11", color=color.orange)
+plot(ema17, title="EMA 17", color=color.blue)
+
+// === Plot Signals ===
+plotshape(flipToLong, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(flipToShort, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// === Show Option Label ===
+if (flipToLong)
+    label.new(bar_index, low, "SELL  " + str.tostring(putStrike) + " PE", style=label.style_label_up, color=color.green, textcolor=color.white)
+
+if (flipToShort)
+    label.new(bar_index, high, "SELL  " + str.tostring(callStrike) + " CE", style=label.style_label_down, color=color.red, textcolor=color.white)
