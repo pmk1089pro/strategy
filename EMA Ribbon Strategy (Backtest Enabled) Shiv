@@ -1,0 +1,79 @@
+//@version=5
+strategy("EMA Ribbon Strategy (Backtest Enabled) Shiv", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=100)
+
+// === INPUTS ===
+len1 = input.int(8, minval=1, title='EMA1 (Fast)')
+len2 = input.int(20, minval=1, title='EMA2 (Slow)')
+len3 = input.int(4, minval=1, title='EMA3 (Optional)')
+len4 = input.int(8, minval=1, title='EMA4 (Optional)')
+len5 = input.int(20, minval=1, title='EMA5 (Optional)')
+
+showShading = input.bool(true, title="Show Trend Background")
+useShorts   = input.bool(false, title="Enable Short Trades")
+
+// === CALCULATE EMAs ===
+ema1 = ta.ema(close, len1)
+ema2 = ta.ema(close, len2)
+ema3 = ta.ema(close, len3)
+ema4 = ta.ema(close, len4)
+ema5 = ta.ema(close, len5)
+
+// === TREND COLORS ===
+bull = ema1 > ema2
+bear = ema1 < ema2
+fcolor = bull ? color.new(#0aff68, 0) : bear ? color.new(#ff0a5a, 0) : color.new(#cccccc, 0)
+
+// === PLOT RIBBON ===
+p1 = plot(ema1, title="EMA 1", color=fcolor, linewidth=2)
+p2 = plot(ema2, title="EMA 2", color=fcolor, linewidth=2)
+fill(p1, p2, color=fcolor, title="Ribbon Fill", transp=60)
+
+// === OPTIONAL EMAs ===
+plot(ema3, title='EMA 3', linewidth=1, color=color.new(color.blue, 40))
+plot(ema4, title='EMA 4', linewidth=1, color=color.new(color.orange, 40))
+plot(ema5, title='EMA 5', linewidth=1, color=color.new(color.yellow, 40))
+
+// === BUY / SELL SIGNALS ===
+buySignal = ta.crossover(ema1, ema2)
+sellSignal = ta.crossunder(ema1, ema2)
+
+// === STRATEGY LOGIC ===
+if (buySignal)
+    strategy.entry("Buy", strategy.long)
+
+if (sellSignal)
+    strategy.close("Buy")
+    
+if (useShorts)
+    if (sellSignal)
+        strategy.entry("Sell", strategy.short)
+    if (buySignal)
+        strategy.close("Sell")
+
+// // === Date Filter for Last 1 Year ===
+// startYear = year(timenow) - 1
+// startMonth = month(timenow)
+// startDay = dayofmonth(timenow)
+// startTime = timestamp(startYear, startMonth, startDay, 0, 0)
+
+// inDateRange = time >= startTime
+
+// // === STRATEGY LOGIC with filter ===
+// if (buySignal and inDateRange)
+//     strategy.entry("Buy", strategy.long)
+
+// if (sellSignal and inDateRange)
+//     strategy.close("Buy")
+
+// if (useShorts)
+//     if (sellSignal and inDateRange)
+//         strategy.entry("Sell", strategy.short)
+//     if (buySignal and inDateRange)
+//         strategy.close("Sell")
+
+// === BACKGROUND COLOR ===
+bgcolor(showShading ? (bull ? color.new(color.green, 90) : bear ? color.new(color.red, 90) : na) : na)
+
+// === OPTIONAL BUY/SELL LABELS (Visual Only) ===
+plotshape(buySignal, title="Buy", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(sellSignal, title="Sell", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
